@@ -1,7 +1,7 @@
 {
   "scope": "community",
   "name": "mock-preset-google-gmail",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Gmail preset for aux4/mock (message list, get, send, labels, batchModify)",
   "license": "Apache-2.0",
   "tags": [

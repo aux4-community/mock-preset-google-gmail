@@ -1,0 +1,144 @@
+{
+  "scope": "community",
+  "name": "mock-preset-google-gmail",
+  "version": "0.0.1",
+  "description": "Gmail preset for aux4/mock (message list, get, send, labels, batchModify)",
+  "license": "Apache-2.0",
+  "tags": [
+    "aux4",
+    "mock",
+    "preset",
+    "google",
+    "gmail",
+    "email",
+    "test"
+  ],
+  "dependencies": [
+    "aux4/mock",
+    "community/mock-preset-google-auth"
+  ],
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "mock",
+          "execute": [
+            "profile:mock"
+          ],
+          "help": {
+            "text": "Programmable HTTP mock server for tests"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mock",
+      "commands": [
+        {
+          "name": "preset",
+          "execute": [
+            "profile:mock:preset"
+          ],
+          "help": {
+            "text": "Apply a service preset to a running mock. Presets are installable packages (community/mock-preset-<service>) that add commands here."
+          }
+        }
+      ]
+    },
+    {
+      "name": "mock:preset",
+      "commands": [
+        {
+          "name": "google",
+          "execute": [
+            "profile:mock:preset:google"
+          ],
+          "help": {
+            "text": "Google presets. `auth` stands up the credentials every Google API needs; the per-service presets (community/mock-preset-google-<service>) add their endpoints here."
+          }
+        }
+      ]
+    },
+    {
+      "name": "mock:preset:google",
+      "commands": [
+        {
+          "name": "gmail",
+          "execute": [
+            "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path /users/me/messages --status 200 --body value(messagesBody)",
+            "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path /users/me/messages/send --status 200 --body value(sentBody)",
+            "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path /users/me/messages/batchModify --status 204 --body '{}'",
+            "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path /users/me/labels --status 200 --body value(labelsBody)",
+            "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path '/users/me/messages/{id}' --status 200 --body value(messageBody)"
+          ],
+          "help": {
+            "text": "Register the Gmail API on a running mock: the message list, a message by id, send, labels, and batchModify. Run `mock preset google auth` first for credentials",
+            "variables": [
+              {
+                "name": "port",
+                "text": "Port of the running mock server (derives stateDir)",
+                "default": "7070"
+              },
+              {
+                "name": "name",
+                "text": "Stable handle of the server (derives stateDir; takes precedence over --port)",
+                "default": ""
+              },
+              {
+                "name": "stateDir",
+                "text": "Explicit state directory (highest precedence)",
+                "default": ""
+              },
+              {
+                "name": "messageId",
+                "text": "Id of the message in the list and the send response. A get by any id echoes the id requested",
+                "default": "18f8a9b0c1d2e3f4"
+              },
+              {
+                "name": "threadId",
+                "text": "Thread id carried by the message bodies",
+                "default": "18f8a9b0c1d2e3f4"
+              },
+              {
+                "name": "subject",
+                "text": "Subject header of the message returned by get",
+                "default": "Weekly update"
+              },
+              {
+                "name": "from",
+                "text": "From header of the message returned by get",
+                "default": "sally@example.com"
+              },
+              {
+                "name": "snippet",
+                "text": "Preview text of the message returned by get",
+                "default": "Hi there, this is a preview"
+              },
+              {
+                "name": "messagesBody",
+                "text": "Message list body (derived from --messageId/--threadId)",
+                "default": "{\"messages\":[{\"id\":\"${messageId}\",\"threadId\":\"${threadId}\"}],\"resultSizeEstimate\":1}"
+              },
+              {
+                "name": "messageBody",
+                "text": "Single message body. Echoes back the id that was requested (derived from --subject/--from/--snippet)",
+                "default": "{\"id\":\"${path.id}\",\"threadId\":\"${threadId}\",\"labelIds\":[\"INBOX\"],\"snippet\":\"${snippet}\",\"payload\":{\"headers\":[{\"name\":\"Subject\",\"value\":\"${subject}\"},{\"name\":\"From\",\"value\":\"${from}\"}]}}"
+              },
+              {
+                "name": "sentBody",
+                "text": "Response to a send (derived from --messageId/--threadId)",
+                "default": "{\"id\":\"${messageId}\",\"threadId\":\"${threadId}\",\"labelIds\":[\"SENT\"]}"
+              },
+              {
+                "name": "labelsBody",
+                "text": "Label list body",
+                "default": "{\"labels\":[{\"id\":\"INBOX\",\"name\":\"INBOX\",\"type\":\"system\"},{\"id\":\"SENT\",\"name\":\"SENT\",\"type\":\"system\"},{\"id\":\"Label_1\",\"name\":\"Work\",\"type\":\"user\"}]}"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

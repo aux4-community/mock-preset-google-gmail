@@ -2,7 +2,7 @@
   "scope": "community",
   "name": "mock-preset-google-gmail",
   "version": "0.0.2",
-  "description": "Gmail preset for aux4/mock (message list, get, send, labels, batchModify)",
+  "description": "Gmail preset for aux4/mock (message list, get, send, trash, labels, batchModify)",
   "license": "Apache-2.0",
   "tags": [
     "aux4",
@@ -67,13 +67,17 @@
           "name": "gmail",
           "execute": [
             "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path /users/me/messages --status 200 --body value(messagesBody)",
-            "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path /users/me/messages/send --status 200 --body value(sentBody)",
+            "file:${thenFile}:${sentThenBody}",
+            "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path /users/me/messages/send --status 200 --body value(sentBody) --thenFile ${thenFile}",
             "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path /users/me/messages/batchModify --status 204 --body '{}'",
             "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path /users/me/labels --status 200 --body value(labelsBody)",
-            "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path '/users/me/messages/{id}' --status 200 --body value(messageBody)"
+            "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path '/users/me/messages/{id}' --status 200 --body value(messageBody)",
+            "file:${thenFile}:${trashThenBody}",
+            "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path '/users/me/messages/{id}/trash' --status 200 --body value(trashBody) --thenFile ${thenFile}",
+            "rm -f ${thenFile}"
           ],
           "help": {
-            "text": "Register the Gmail API on a running mock: the message list, a message by id, send, labels, and batchModify. Run `mock preset google auth` first for credentials",
+            "text": "Register the Gmail API on a running mock: the message list, a message by id, send, trash, labels, and batchModify. Run `mock preset google auth` first for credentials",
             "variables": [
               {
                 "name": "port",
@@ -89,6 +93,11 @@
                 "name": "stateDir",
                 "text": "Explicit state directory (highest precedence)",
                 "default": ""
+              },
+              {
+                "name": "thenFile",
+                "text": "Internal scratch file this command writes and reuses to pass --thenFile JSON to aux4/mock (the JSON references ${path.*}/${body.*}, whose names collide with this command's own --path/--body flags, so it must travel through a file rather than inline --then). Removed when the command finishes",
+                "default": ".mock-preset-google-gmail-then-${port}${name}.json"
               },
               {
                 "name": "messageId",
@@ -134,6 +143,21 @@
                 "name": "labelsBody",
                 "text": "Label list body",
                 "default": "{\"labels\":[{\"id\":\"INBOX\",\"name\":\"INBOX\",\"type\":\"system\"},{\"id\":\"SENT\",\"name\":\"SENT\",\"type\":\"system\"},{\"id\":\"Label_1\",\"name\":\"Work\",\"type\":\"user\"}]}"
+              },
+              {
+                "name": "trashBody",
+                "text": "Response to a trash call (derived from --threadId)",
+                "default": "{\"id\":\"${path.id}\",\"threadId\":\"${threadId}\",\"labelIds\":[\"TRASH\"]}"
+              },
+              {
+                "name": "sentThenBody",
+                "text": "aux4/mock --then for a send: makes a later GET of the fixed --messageId return the sent message's to/subject/body. A field the send request did not include resolves to an empty string",
+                "default": "[{\"method\":\"GET\",\"path\":\"/users/me/messages/${messageId}\",\"status\":200,\"body\":\"{\\\"id\\\":\\\"${messageId}\\\",\\\"threadId\\\":\\\"${threadId}\\\",\\\"labelIds\\\":[\\\"SENT\\\"],\\\"snippet\\\":\\\"${body.body}\\\",\\\"payload\\\":{\\\"headers\\\":[{\\\"name\\\":\\\"To\\\",\\\"value\\\":\\\"${body.to}\\\"},{\\\"name\\\":\\\"Subject\\\",\\\"value\\\":\\\"${body.subject}\\\"}]}}\"}]"
+              },
+              {
+                "name": "trashThenBody",
+                "text": "aux4/mock --then for a trash: makes a later GET of that message id show the TRASH label in place of INBOX",
+                "default": "[{\"method\":\"GET\",\"path\":\"/users/me/messages/${path.id}\",\"status\":200,\"body\":\"{\\\"id\\\":\\\"${path.id}\\\",\\\"threadId\\\":\\\"${threadId}\\\",\\\"labelIds\\\":[\\\"TRASH\\\"],\\\"snippet\\\":\\\"${snippet}\\\",\\\"payload\\\":{\\\"headers\\\":[{\\\"name\\\":\\\"Subject\\\",\\\"value\\\":\\\"${subject}\\\"},{\\\"name\\\":\\\"From\\\",\\\"value\\\":\\\"${from}\\\"}]}}\"}]"
               }
             ]
           }

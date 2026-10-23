@@ -3,8 +3,8 @@
 Gmail preset for [aux4/mock](https://hub.aux4.io/r/public/packages/aux4/mock).
 
 One command replaces the Gmail API with a local mock: the message list, a message by id, send,
-labels, and `batchModify`. Point a Gmail client at the mock with `--apiUrl` and it behaves like
-the real service, offline.
+trash, labels, and `batchModify`. Point a Gmail client at the mock with `--apiUrl` and it behaves
+like the real service, offline.
 
 ## Installation
 
@@ -13,7 +13,8 @@ aux4 aux4 pkger install community/mock-preset-google-gmail
 ```
 
 Installing pulls in `community/mock-preset-google-auth`, which supplies the credentials every
-Google API call needs.
+Google API call needs. Requires `aux4/mock` 0.1.0 or later (for the stateful-effects `--thenFile`
+flag used by this preset's `send` and `trash` endpoints).
 
 ## Usage
 
@@ -42,11 +43,40 @@ aux4 google gmail list --tokenFile google-token.json --apiUrl http://127.0.0.1:1
 | `GET` | `/users/me/messages` | a one-message list |
 | `GET` | `/users/me/messages/{id}` | that message, echoing the id requested |
 | `POST` | `/users/me/messages/send` | the sent message, labelled `SENT` |
+| `POST` | `/users/me/messages/{id}/trash` | the message, labelled `TRASH` |
 | `POST` | `/users/me/messages/batchModify` | `204`, no body |
 | `GET` | `/users/me/labels` | `INBOX`, `SENT`, and a user label `Work` |
 
 A get by id echoes back whatever id was asked for, so a test that lists then fetches gets a
 message whose id matches the one it followed.
+
+### Stateful effects: GET reflects an earlier send/trash
+
+`send` and `trash` reprogram the GET-by-id endpoint for the affected message when they serve a
+response (via [`aux4/mock`'s `--thenFile`](https://hub.aux4.io/r/public/packages/aux4/mock)), so a
+test that acts and then reads back sees the effect of the action:
+
+- **`send`** -> a later `GET` of the fixed `--messageId` returns the sent message's `to`/`subject`
+  headers and a `snippet` built from the request's `to`/`subject`/`body` fields. A real Gmail
+  client posts a base64 `raw` MIME message, which this mock does not decode — send structured
+  `to`/`subject`/`body` fields in a test to see them reflected; a `raw`-only send still works but
+  the follow-up `GET` won't carry those headers.
+- **`trash`** -> a later `GET` of that message id shows `labelIds: ["TRASH"]` in place of `INBOX`.
+
+```bash
+aux4 mock preset google gmail --port 18901
+
+curl -s -X POST http://localhost:18901/api/users/me/messages/send \
+  -H 'Content-Type: application/json' -d '{"to":"sally@aux4.io","subject":"hi","body":"hello sally"}'
+# {"id":"18f8a9b0c1d2e3f4","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"]}
+
+curl -s http://localhost:18901/api/users/me/messages/18f8a9b0c1d2e3f4
+# {"id":"18f8a9b0c1d2e3f4","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"],"snippet":"hello sally","payload":{"headers":[{"name":"To","value":"sally@aux4.io"},{"name":"Subject","value":"hi"}]}}
+```
+
+`batchModify` stays a plain `204` acknowledgement — it targets messages by an `ids` array in the
+request body, which this mock's templating cannot address generically. Use `trash` for a
+single-message state-aware label change.
 
 ### Shaping the responses
 

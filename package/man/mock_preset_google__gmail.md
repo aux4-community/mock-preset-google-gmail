@@ -2,7 +2,7 @@
 
 The `gmail` command registers the Gmail API on a running `aux4/mock` server, so a Gmail client can
 run against a local mock instead of Google. It stubs the message list, a message by id, send,
-labels, and `batchModify` in one call.
+trash, labels, and `batchModify` in one call.
 
 It registers credentials for nothing — run `aux4 mock preset google auth` first. That command
 writes the token file and stubs the OAuth endpoints; this one only serves the API.
@@ -17,6 +17,17 @@ or `--labelsBody`.
 
 The preset is a base layer. Apply it, then call `aux4 mock stub` for any endpoint you want to
 behave differently — a later stub for the same method and path replaces the preset's.
+
+#### Stateful effects
+
+`send` and `trash` reprogram the GET-by-id endpoint for the affected message when they serve a
+response (using `aux4/mock`'s `--thenFile`): a `send` makes a later `GET` of the fixed
+`--messageId` return the sent message's `to`/`subject`/`body` (best-effort — a real client's
+base64 `raw` payload is not decoded; send structured fields in a test to see them reflected); a
+`trash` makes a later `GET` of that message id show `labelIds: ["TRASH"]`. `batchModify` is
+unaffected — it targets messages by an `ids` array, which this mock's templating cannot address
+generically; use `trash` when the test needs the state-aware path. Requires `aux4/mock` 0.1.0 or
+later.
 
 #### Usage
 
@@ -35,6 +46,7 @@ aux4 mock preset google gmail [--port <port>] [--subject <text>] [--from <addres
 --messagesBody  Raw JSON body for the message list
 --messageBody   Raw JSON body for a message by id
 --sentBody      Raw JSON body for a send
+--trashBody     Raw JSON body for a trash call
 --labelsBody    Raw JSON body for the label list
 
 #### Example
@@ -51,6 +63,7 @@ stub POST /users/me/messages/send -> 200
 stub POST /users/me/messages/batchModify -> 204
 stub GET /users/me/labels -> 200
 stub GET /users/me/messages/{id} -> 200
+stub POST /users/me/messages/{id}/trash -> 200
 ```
 
 A Gmail client pointed at the mock then returns the stubbed message:

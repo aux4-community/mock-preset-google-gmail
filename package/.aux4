@@ -1,7 +1,7 @@
 {
   "scope": "community",
   "name": "mock-preset-google-gmail",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Gmail preset for aux4/mock (message list, get, send, trash, labels, batchModify)",
   "license": "Apache-2.0",
   "tags": [
@@ -75,7 +75,8 @@
             "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path '/users/me/messages/{id}' --status 200 --body value(messageBody)",
             "file:${thenFile}:${trashThenBody}",
             "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path '/users/me/messages/{id}/trash' --status 200 --body value(trashBody) --thenFile ${thenFile}",
-            "rm -f ${thenFile}"
+            "rm -f ${thenFile}",
+            "rm -f ${sentBodyFile}"
           ],
           "help": {
             "text": "Register the Gmail API on a running mock: the message list, a message by id, send, trash, labels, and batchModify. Run `mock preset google auth` first for credentials",

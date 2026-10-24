@@ -134,7 +134,8 @@ curl -s http://localhost:18903/api/users/me/messages/msg-sent-0001
 ```
 
 ```expect
-{"id":"msg-sent-0001","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"]}{"id":"msg-sent-0001","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"],"snippet":"hello sally","payload":{"headers":[{"name":"To","value":"sally@aux4.io"},{"name":"Subject","value":"hi"}]}}
+{"id":"msg-sent-0001","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"]}
+{"id":"msg-sent-0001","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"],"snippet":"hello sally","payload":{"headers":[{"name":"To","value":"sally@aux4.io"},{"name":"Subject","value":"hi"}]}}
 ```
 
 ### should leave the inbox message unchanged after a send

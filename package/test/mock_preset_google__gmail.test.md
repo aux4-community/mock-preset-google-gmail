@@ -68,7 +68,17 @@ curl -s -X POST http://localhost:18903/api/users/me/messages/send -H 'Content-Ty
 ```
 
 ```expect
-{"id":"18f8a9b0c1d2e3f4","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"]}
+{"id":"msg-sent-0001","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"]}
+```
+
+### should keep the thread a reply is sent on
+
+```execute
+curl -s -X POST http://localhost:18903/api/users/me/messages/send -H 'Content-Type: application/json' -d '{"raw":"...","threadId":"thr-99"}'
+```
+
+```expect
+{"id":"msg-sent-0001","threadId":"thr-99","labelIds":["SENT"]}
 ```
 
 ### should not let the send path fall through to the message-by-id stub
@@ -120,11 +130,21 @@ stub POST /users/me/messages/{id}/trash -> 200
 
 ```execute
 curl -s -X POST http://localhost:18903/api/users/me/messages/send -H 'Content-Type: application/json' -d '{"to":"sally@aux4.io","subject":"hi","body":"hello sally"}'
-curl -s http://localhost:18903/api/users/me/messages/18f8a9b0c1d2e3f4
+curl -s http://localhost:18903/api/users/me/messages/msg-sent-0001
 ```
 
 ```expect
-{"id":"18f8a9b0c1d2e3f4","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"]}{"id":"18f8a9b0c1d2e3f4","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"],"snippet":"hello sally","payload":{"headers":[{"name":"To","value":"sally@aux4.io"},{"name":"Subject","value":"hi"}]}}
+{"id":"msg-sent-0001","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"]}{"id":"msg-sent-0001","threadId":"18f8a9b0c1d2e3f4","labelIds":["SENT"],"snippet":"hello sally","payload":{"headers":[{"name":"To","value":"sally@aux4.io"},{"name":"Subject","value":"hi"}]}}
+```
+
+### should leave the inbox message unchanged after a send
+
+```execute
+curl -s http://localhost:18903/api/users/me/messages/18f8a9b0c1d2e3f4
+```
+
+```expect:partial
+"labelIds":["INBOX"]
 ```
 
 ### should show the TRASH label on a later GET after trashing the message

@@ -68,7 +68,8 @@
           "execute": [
             "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path /users/me/messages --status 200 --body value(messagesBody)",
             "file:${thenFile}:${sentThenBody}",
-            "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path /users/me/messages/send --status 200 --body value(sentBody) --thenFile ${thenFile}",
+            "file:${sentBodyFile}:${sentBody}",
+            "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path /users/me/messages/send --status 200 --bodyFile ${sentBodyFile} --thenFile ${thenFile}",
             "aux4 mock stub param(port) param(name) param(stateDir) --method POST --path /users/me/messages/batchModify --status 204 --body '{}'",
             "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path /users/me/labels --status 200 --body value(labelsBody)",
             "aux4 mock stub param(port) param(name) param(stateDir) --method GET --path '/users/me/messages/{id}' --status 200 --body value(messageBody)",
@@ -137,7 +138,7 @@
               {
                 "name": "sentBody",
                 "text": "Response to a send (derived from --messageId/--threadId)",
-                "default": "{\"id\":\"${messageId}\",\"threadId\":\"${threadId}\",\"labelIds\":[\"SENT\"]}"
+                "default": "{\"id\":\"${sentMessageId}\",\"threadId\":\"${body.threadId:-${threadId}}\",\"labelIds\":[\"SENT\"]}"
               },
               {
                 "name": "labelsBody",
@@ -152,12 +153,22 @@
               {
                 "name": "sentThenBody",
                 "text": "aux4/mock --then for a send: makes a later GET of the fixed --messageId return the sent message's to/subject/body. A field the send request did not include resolves to an empty string",
-                "default": "[{\"method\":\"GET\",\"path\":\"/users/me/messages/${messageId}\",\"status\":200,\"body\":\"{\\\"id\\\":\\\"${messageId}\\\",\\\"threadId\\\":\\\"${threadId}\\\",\\\"labelIds\\\":[\\\"SENT\\\"],\\\"snippet\\\":\\\"${body.body}\\\",\\\"payload\\\":{\\\"headers\\\":[{\\\"name\\\":\\\"To\\\",\\\"value\\\":\\\"${body.to}\\\"},{\\\"name\\\":\\\"Subject\\\",\\\"value\\\":\\\"${body.subject}\\\"}]}}\"}]"
+                "default": "[{\"method\":\"GET\",\"path\":\"/users/me/messages/${sentMessageId}\",\"status\":200,\"body\":\"{\\\"id\\\":\\\"${sentMessageId}\\\",\\\"threadId\\\":\\\"${body.threadId:-${threadId}}\\\",\\\"labelIds\\\":[\\\"SENT\\\"],\\\"snippet\\\":\\\"${body.body}\\\",\\\"payload\\\":{\\\"headers\\\":[{\\\"name\\\":\\\"To\\\",\\\"value\\\":\\\"${body.to}\\\"},{\\\"name\\\":\\\"Subject\\\",\\\"value\\\":\\\"${body.subject}\\\"}]}}\"}]"
               },
               {
                 "name": "trashThenBody",
                 "text": "aux4/mock --then for a trash: makes a later GET of that message id show the TRASH label in place of INBOX",
                 "default": "[{\"method\":\"GET\",\"path\":\"/users/me/messages/${path.id}\",\"status\":200,\"body\":\"{\\\"id\\\":\\\"${path.id}\\\",\\\"threadId\\\":\\\"${threadId}\\\",\\\"labelIds\\\":[\\\"TRASH\\\"],\\\"snippet\\\":\\\"${snippet}\\\",\\\"payload\\\":{\\\"headers\\\":[{\\\"name\\\":\\\"Subject\\\",\\\"value\\\":\\\"${subject}\\\"},{\\\"name\\\":\\\"From\\\",\\\"value\\\":\\\"${from}\\\"}]}}\"}]"
+              },
+              {
+                "name": "sentMessageId",
+                "text": "Id given to a message sent through the mock (distinct from the inbox message, so reading the inbox message after a send still returns it).",
+                "default": "msg-sent-0001"
+              },
+              {
+                "name": "sentBodyFile",
+                "text": "Scratch file the send response template is written to.",
+                "default": ".mock-preset-google-gmail-sent-${port}${name}.json"
               }
             ]
           }
